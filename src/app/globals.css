@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Plus Jakarta Sans", sans-serif normal !important;
+}
+
+
+body {
+  background-color: #1C1E2F;
+  color: white;
+  font-family: "Plus Jakarta Sans", sans-serif normal !important;
+}
+
+.bg-shape1 {
+  width: 400px;
+  height: 400px;
+  border-radius: 9999px;
+  animation: fade-in-1 15s infinite;
+}
+
+.bg-shape2 {
+  width: 400px;
+  height: 400px;
+  border-radius: 9999px;
+  animation: fade-out-2 15s infinite;
+}
+
+@keyframes fade-in-1 {
+  0% { opacity: 0; }
+  25% { opacity: 0.15; }
+  50% { opacity: 0.3; }
+  75% { opacity: 0.15; }
+  100% { opacity: 0; }
+}
+
+@keyframes fade-out-2 {
+  0% { opacity: 0.3; }
+  25% { opacity: 0.15; }
+  50% { opacity: 0; }
+  75% { opacity: 0.15; }
+  100% { opacity: 0.3; }
+}
+
+.bg-blur {
+  filter: blur(90px);
+}
+
+.bg-primary{
+  background-color: rgb(30, 0, 255);
+}
+
+.bg-teal {
+  background-color: rgb(255, 72, 173);
+}
+
+.bg-purple {
+  background-color: rgb(140, 0, 215);
+}

@@ -36,9 +36,6 @@ const Header = () => {
     }
   }, [accounts]);
 
-  useEffect(() => {
-    console.log(signingManager, ".");
-  }, [signingManager]);
 
   //connect wallet
   const connectWalletToPolymesh = async () => {
@@ -89,7 +86,7 @@ const Header = () => {
             <ProfileIcon />
             <span className={styles.walletAddress}>
               {formatWalletHashSmaller(
-                "5CV4DzBZnkrP1Sr86vVcogaJoVb8jMDiHyjjL3i62vjWwWr9"
+                address
               )}
             </span>
           </>

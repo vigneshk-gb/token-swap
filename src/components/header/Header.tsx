@@ -68,23 +68,22 @@ const Header = () => {
       </div>
       <div className={styles.walletInfo}>
         {!address ? (
-          isLoading ? (
-            <ClipLoader
-              color="#949BE0"
-              loading={isLoading}
-              size={25}
-              aria-label="Loading Spinner"
-              data-testid="loader"
-            />
-          ) : (
-            <div
-              className={styles.connectBtn}
-              onClick={connectWalletToPolymesh}
-            >
-              <IoWalletOutline size={20} />
-              <span>Connect</span>
-            </div>
-          )
+          <div className={styles.connectBtn} onClick={connectWalletToPolymesh}>
+            {isLoading ? (
+              <ClipLoader
+                color="#949BE0"
+                loading={isLoading}
+                size={25}
+                aria-label="Loading Spinner"
+                data-testid="loader"
+              />
+            ) : (
+              <>
+                <IoWalletOutline size={20} />
+                <span>Connect</span>
+              </>
+            )}
+          </div>
         ) : (
           <>
             <ProfileIcon />

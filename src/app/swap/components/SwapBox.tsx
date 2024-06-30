@@ -152,6 +152,7 @@ const SwapBox = () => {
               width={22}
               height={22}
               className="cursor-pointer"
+              onClick={() => setSelectedIndexFrom(0)}
             />
             <Image
               src={usdcLogo}
@@ -159,6 +160,7 @@ const SwapBox = () => {
               width={22}
               height={22}
               className="cursor-pointer"
+              onClick={() => setSelectedIndexFrom(1)}
             />
             <Image
               src={polyxLogo}
@@ -166,6 +168,7 @@ const SwapBox = () => {
               width={22}
               height={22}
               className="cursor-pointer"
+              onClick={() => setSelectedIndexFrom(2)}
             />
           </div>
         </div>
@@ -237,6 +240,7 @@ const SwapBox = () => {
               width={22}
               height={22}
               className="cursor-pointer"
+              onClick={() => setSelectedIndexTo(0)}
             />
             <Image
               src={usdcLogo}
@@ -244,6 +248,7 @@ const SwapBox = () => {
               width={22}
               height={22}
               className="cursor-pointer"
+              onClick={() => setSelectedIndexTo(1)}
             />
             <Image
               src={polyxLogo}
@@ -251,6 +256,7 @@ const SwapBox = () => {
               width={22}
               height={22}
               className="cursor-pointer"
+              onClick={() => setSelectedIndexTo(2)}
             />
           </div>
         </div>

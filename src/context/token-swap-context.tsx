@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import BigNumber from "bignumber.js";
 import { CreateAssetParams } from "@polymeshassociation/polymesh-sdk/types";
 import { it } from "node:test";
+import { JsonRpcSigner } from "ethers";
 
 type TokenSwapContextProviderProps = {
   children: React.ReactNode;
@@ -24,13 +25,16 @@ type Theme = "dark" | "light";
 
 type TokenSwapContextValue = {
   theme: Theme;
-  signingManager?: BrowserExtensionSigningManager;
+  signingManager?: BrowserExtensionSigningManager | undefined;
+  signingManagerMetamask: JsonRpcSigner | undefined;
   network?: NetworkInfo;
   sdk?: Polymesh;
   chain?: string;
   accounts?: string[];
   walletError?: string;
   createSigningManager: () => void;
+  setSigningManager: React.Dispatch<BrowserExtensionSigningManager | undefined>;
+  setSigningManagerMetamask: React.Dispatch<JsonRpcSigner | undefined>
 };
 
 export const TokenSwapContext = createContext<TokenSwapContextValue | null>(
@@ -43,7 +47,11 @@ export default function TokenSwapContextProvider({
   const [theme, setTheme] = useState<Theme>("light");
 
   const [signingManager, setSigningManager] =
-    useState<BrowserExtensionSigningManager>();
+    useState<BrowserExtensionSigningManager | undefined>();
+
+  const [signingManagerMetamask, setSigningManagerMetamask] =
+    useState<JsonRpcSigner | undefined>();
+
   const [network, setNetwork] = useState<NetworkInfo>();
   const [sdk, setSdk] = useState<Polymesh>();
   const [chain, setChain] = useState<string>();
@@ -198,6 +206,9 @@ export default function TokenSwapContextProvider({
       value={{
         theme,
         signingManager,
+        signingManagerMetamask,
+        setSigningManager,
+        setSigningManagerMetamask,
         network,
         sdk,
         chain,

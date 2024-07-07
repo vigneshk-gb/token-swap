@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+
+import { ethers } from "ethers";
 
 import { IoIosSwitch } from "react-icons/io";
 import { MdOutlineRefresh } from "react-icons/md";
@@ -12,11 +15,13 @@ import { FaArrowDownLong } from "react-icons/fa6";
 import ethLogo from "../../../../public/icons/eth.png";
 import usdcLogo from "../../../../public/icons/usdc.png";
 import polyxLogo from "../../../../public/icons/polyx.png";
-import Image from "next/image";
+
+import contractAbi from "../../../lib/token-swap.json";
+import { useTokenSwapContext } from "@/context/token-swap-context";
 
 const styles = {
-  container: `relative w-[500px] h-fit min-h-[500px] mt-[100px] mx-auto flex flex-col gap-3 z-10`,
-  arrowCtn: `bg-[#1C1E2F] rounded-lg p-2 drop-shadow-2xl absolute top-[56%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer hover:rotate-180 transition-all ease-in-out duration-500`,
+  container: `relative w-full max-w-[500px] h-fit min-h-[500px] mt-[100px] mx-auto flex flex-col items-center gap-3 z-10`,
+  arrowCtn: `bg-[#1C1E2F] rounded-lg p-2 drop-shadow-2xl absolute top-[52%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer hover:rotate-180 transition-all ease-in-out duration-500`,
   topCtn: `w-full h-fit flex items-center justify-between`,
   fromCtn: `w-full h-fit min-h-[200px] bg-[#2C2D51] rounded-3xl p-[18px] flex flex-col gap-6 z-10 bg-opacity-70`,
   InnerTopCtn: `w-full h-fit flex items-center justify-between`,
@@ -35,9 +40,12 @@ const styles = {
   tickersLogoCtn: `w-fit flex gap-3`,
   label: `text-[14px] text-[#AAB3FF] font-semibold leading-normal `,
   toCtn: `w-full h-fit min-h-[200px] bg-[#2C2D51] rounded-3xl p-[18px] flex flex-col gap-6 z-10 bg-opacity-70`,
+  primaryBtn: `w-1/2 min-w-fit h-fit text-[14px] text-[#BCBED5] hover:text-[#949BE0] font-bold leading-normal text-center px-[20px] py-[10px] rounded-md bg-[#1C1E2F]  cursor-pointer transition-all ease-in-out duration-100 drop-shadow-2xl`,
 };
 
 const SwapBox = () => {
+  const { signingManagerMetamask } = useTokenSwapContext();
+
   const [isFromOpen, setIsFromOpen] = useState<boolean>(false);
   const [isToOpen, setIsToOpen] = useState<boolean>(false);
 
@@ -133,6 +141,34 @@ const SwapBox = () => {
     }
   };
 
+  //web3
+  const burnTokens = async () => {
+    if (!signingManagerMetamask) return;
+
+    try {
+      const contractAddress = "0x003A422d4aF90C9bD4Ef147634D144B5DB168183";
+      const tokensContract = new ethers.Contract(
+        contractAddress,
+        contractAbi,
+        signingManagerMetamask
+      );
+
+      const address = await signingManagerMetamask.getAddress();
+
+      console.log(tokensContract, "tokensContract");
+      console.log(address, "address");
+      // Call the burn function
+      const tx = await tokensContract.burn(fromAmount, address);
+      console.log("Transaction sent:", tx);
+
+      // Wait for the transaction to be mined
+      const receipt = await tx.wait();
+      console.log("Transaction mined:", receipt);
+    } catch (error) {
+      console.error("Error burning tokens:", error);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.topCtn}>
@@ -190,9 +226,10 @@ const SwapBox = () => {
                 onClick={toggleIsFromOpen}
               >
                 <span>{tickers[selectedIndexFrom]}</span>
-                <RiArrowDropDownLine size={25} className={`${
-                  isFromOpen ? "rotate-180" : ""
-                }`}/>
+                <RiArrowDropDownLine
+                  size={25}
+                  className={`${isFromOpen ? "rotate-180" : ""}`}
+                />
               </div>
               <ul
                 className={`${styles.dropdownMenu} ${
@@ -279,9 +316,10 @@ const SwapBox = () => {
                 onClick={toggleIsToOpen}
               >
                 <span>{tickers[selectedIndexTo]}</span>
-                <RiArrowDropDownLine size={25} className={`${
-                  isToOpen ? "rotate-180" : ""
-                }`}/>
+                <RiArrowDropDownLine
+                  size={25}
+                  className={`${isToOpen ? "rotate-180" : ""}`}
+                />
               </div>
               <ul
                 className={`${styles.dropdownMenu} ${
@@ -310,6 +348,10 @@ const SwapBox = () => {
           </div>
         </div>
       </div>
+
+      <button className={styles.primaryBtn} onClick={burnTokens}>
+        Burn
+      </button>
     </div>
   );
 };

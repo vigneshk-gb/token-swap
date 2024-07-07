@@ -157,8 +157,10 @@ const SwapBox = () => {
 
       console.log(tokensContract, "tokensContract");
       console.log(address, "address");
-      // Call the burn function
-      const tx = await tokensContract.burn(fromAmount, address);
+      // Call the burn function with a specified gas limit
+      const tx = await tokensContract.burn(fromAmount, address, {
+        gasLimit: 300000 // Set an appropriate gas limit
+      });
       console.log("Transaction sent:", tx);
 
       // Wait for the transaction to be mined
@@ -167,7 +169,8 @@ const SwapBox = () => {
     } catch (error) {
       console.error("Error burning tokens:", error);
     }
-  };
+};
+
 
   return (
     <div className={styles.container}>

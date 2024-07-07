@@ -36,10 +36,7 @@ const Header = () => {
   const {
     accounts,
     createSigningManager,
-    setSigningManager,
-    setSigningManagerMetamask,
-    signingManager,
-    signingManagerMetamask
+    setSigningManager
   } = useTokenSwapContext();
   const [address, setAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -75,7 +72,6 @@ const Header = () => {
       });
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
-      setSigningManagerMetamask(signer);
       const userAddress = await signer.getAddress();
       setAddress(userAddress);
       localStorage.setItem("walletAddress", userAddress);
@@ -103,18 +99,14 @@ const Header = () => {
     return () => {
       setAddress(null);
       setSigningManager(undefined);
-      setSigningManagerMetamask(undefined);
-    }
-  }, [address]);
-
+    };
+  }, []);
 
   const disconnectWallet = () => {
     setAddress(null);
     setSigningManager(undefined);
-    setSigningManagerMetamask(undefined);
     localStorage.removeItem("walletAddress");
   };
-
 
   return (
     <div className={styles.header}>

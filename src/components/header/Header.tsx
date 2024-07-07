@@ -33,11 +33,8 @@ const styles = {
 };
 
 const Header = () => {
-  const {
-    accounts,
-    createSigningManager,
-    setSigningManager
-  } = useTokenSwapContext();
+  const { accounts, createSigningManager, setSigningManager } =
+    useTokenSwapContext();
   const [address, setAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -133,15 +130,7 @@ const Header = () => {
               data-testid="loader"
             />
           </div>
-        ) : address ? (
-          <div className={styles.walletInfo}>
-            <ProfileIcon />
-            <span className={styles.walletAddress}>
-              {formatWalletHashSmaller(address ? address : "")}
-            </span>
-            <TbWalletOff size={25} onClick={disconnectWallet} color="#949BE0" />
-          </div>
-        ) : (
+        ) : address === null ? (
           <details className={styles.walletInfo}>
             <summary className={styles.connectBtn}>
               <IoWalletOutline size={20} />
@@ -177,6 +166,14 @@ const Header = () => {
               </div>
             </div>
           </details>
+        ) : (
+          <div className={styles.walletInfo}>
+            <ProfileIcon />
+            <span className={styles.walletAddress}>
+              {formatWalletHashSmaller(address ? address : "")}
+            </span>
+            <TbWalletOff size={25} onClick={disconnectWallet} color="#949BE0" />
+          </div>
         )}
 
         <BsThreeDots size={20} className="cursor-pointer" />

@@ -157,7 +157,7 @@ const SwapBox = () => {
       const tokensContract = new ethers.Contract(
         contractAddress,
         contractAbi,
-        signingManagerMetamask
+        signer
       );
 
       const address = await signer.getAddress();

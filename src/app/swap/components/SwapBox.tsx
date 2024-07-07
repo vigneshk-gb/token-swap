@@ -143,9 +143,16 @@ const SwapBox = () => {
 
   //web3
   const burnTokens = async () => {
-    if (!signingManagerMetamask) return;
-
     try {
+      //@ts-ignore
+
+      const provider = new ethers.BrowserProvider(window.ethereum, {
+        chainId: 11155111, // Sepolia's chain ID
+        name: "sepolia",
+      });
+      await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+
       const contractAddress = "0x003A422d4aF90C9bD4Ef147634D144B5DB168183";
       const tokensContract = new ethers.Contract(
         contractAddress,
@@ -153,13 +160,13 @@ const SwapBox = () => {
         signingManagerMetamask
       );
 
-      const address = await signingManagerMetamask.getAddress();
+      const address = await signer.getAddress();
 
       console.log(tokensContract, "tokensContract");
       console.log(address, "address");
       // Call the burn function with a specified gas limit
       const tx = await tokensContract.burn(fromAmount, address, {
-        gasLimit: 300000 // Set an appropriate gas limit
+        gasLimit: 300000, // Set an appropriate gas limit
       });
       console.log("Transaction sent:", tx);
 
@@ -169,8 +176,7 @@ const SwapBox = () => {
     } catch (error) {
       console.error("Error burning tokens:", error);
     }
-};
-
+  };
 
   return (
     <div className={styles.container}>

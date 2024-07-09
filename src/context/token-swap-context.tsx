@@ -26,15 +26,17 @@ type Theme = "dark" | "light";
 type TokenSwapContextValue = {
   theme: Theme;
   signingManager?: BrowserExtensionSigningManager | undefined;
-  signingManagerMetamask: JsonRpcSigner | undefined;
+  signingManagerMetamask?: JsonRpcSigner | undefined;
   network?: NetworkInfo;
   sdk?: Polymesh;
   chain?: string;
   accounts?: string[];
   walletError?: string;
   createSigningManager: () => void;
-  setSigningManager: React.Dispatch<BrowserExtensionSigningManager | undefined>;
-  setSigningManagerMetamask: React.Dispatch<JsonRpcSigner | undefined>
+  setSigningManager: React.Dispatch<React.SetStateAction<BrowserExtensionSigningManager | undefined>>;
+  setSigningManagerMetamask: React.Dispatch<React.SetStateAction<JsonRpcSigner | undefined>>;
+  address: string | null;
+  setAddress: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 export const TokenSwapContext = createContext<TokenSwapContextValue | null>(
@@ -57,6 +59,7 @@ export default function TokenSwapContextProvider({
   const [chain, setChain] = useState<string>();
   const [accounts, setAccounts] = useState<string[]>();
   const [walletError, setWalletError] = useState<string>();
+  const [address, setAddress] = useState<string | null>(null);
 
   // Define reference for tracking component mounted state.
   const mountedRef = useRef(false);
@@ -215,6 +218,8 @@ export default function TokenSwapContextProvider({
         accounts,
         walletError,
         createSigningManager,
+        address,
+        setAddress
       }}
     >
       {children}

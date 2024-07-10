@@ -40,7 +40,9 @@ const Header = () => {
     signingManagerMetamask,
     setSigningManagerMetamask,
     address,
-    setAddress
+    setAddress,
+    isLoadingPolymesh,
+    setIsLoadingPolymesh
   } = useTokenSwapContext();
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -55,12 +57,11 @@ const Header = () => {
   //connect wallet
   const connectWalletToPolymesh = async () => {
     if (address) return;
-    setIsLoading(true);
+    setIsLoadingPolymesh(true);
     try {
       createSigningManager();
-      setIsLoading(false);
     } catch (error) {
-      setIsLoading(false);
+      setIsLoadingPolymesh(false);
       console.log(error);
     }
   };
@@ -154,7 +155,7 @@ const Header = () => {
       </div>
 
       <div className={styles.walletContainer}>
-        {isLoading ? (
+        {isLoadingPolymesh ? (
           <div className={styles.connectBtn}>
             <ClipLoader
               color="#949BE0"
@@ -171,7 +172,7 @@ const Header = () => {
             </summary>
 
             <div className={styles.walletList}>
-              <div
+              {/* <div
                 className={styles.walletItem}
                 onClick={connectWalletToMetamask}
               >
@@ -183,7 +184,7 @@ const Header = () => {
                   className="cursor-pointer"
                 />
                 Metamask
-              </div>
+              </div> */}
               <div
                 className={styles.walletItem}
                 onClick={connectWalletToPolymesh}

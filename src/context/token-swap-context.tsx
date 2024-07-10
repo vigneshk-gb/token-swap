@@ -35,8 +35,10 @@ type TokenSwapContextValue = {
   createSigningManager: () => void;
   setSigningManager: React.Dispatch<React.SetStateAction<BrowserExtensionSigningManager | undefined>>;
   setSigningManagerMetamask: React.Dispatch<React.SetStateAction<JsonRpcSigner | undefined>>;
-  address: string | null;
+  address: string |  null;
   setAddress: React.Dispatch<React.SetStateAction<string | null>>;
+  isLoadingPolymesh:boolean;
+  setIsLoadingPolymesh: React.Dispatch<React.SetStateAction<boolean>>
 };
 
 export const TokenSwapContext = createContext<TokenSwapContextValue | null>(
@@ -60,6 +62,8 @@ export default function TokenSwapContextProvider({
   const [accounts, setAccounts] = useState<string[]>();
   const [walletError, setWalletError] = useState<string>();
   const [address, setAddress] = useState<string | null>(null);
+  const [isLoadingPolymesh, setIsLoadingPolymesh] = useState<boolean>(false);
+
 
   // Define reference for tracking component mounted state.
   const mountedRef = useRef(false);
@@ -127,17 +131,17 @@ export default function TokenSwapContextProvider({
     let effectMounted = true;
     let polymeshSdk: Polymesh;
 
-    let wssUrl = 'wss://dev-fsn001.nsite.dev/staging/'
+    // let wssUrl = 'wss://dev-fsn001.nsite.dev/staging/'
     
     console.log(
-      `\nConnecting to Polymesh ${network.name} at ${wssUrl}.\n`
+      `\nConnecting to Polymesh ${network.name} at ${network.wssUrl}.\n`
     );
 
     const connect = async () => {
       try {
         polymeshSdk = await Polymesh.connect({
           // nodeUrl: network.wssUrl,
-          nodeUrl: wssUrl,
+          nodeUrl: network.wssUrl,
           signingManager,
         });
         const chainName = (
@@ -179,6 +183,7 @@ export default function TokenSwapContextProvider({
 
   useEffect(() => {
     if (!signingManager || !sdk) return;
+    setIsLoadingPolymesh(false);
     let effectMounted = true;
     const readAccounts = async () => {
       const allAccounts = await signingManager.getAccounts();
@@ -219,7 +224,9 @@ export default function TokenSwapContextProvider({
         walletError,
         createSigningManager,
         address,
-        setAddress
+        setAddress,
+        isLoadingPolymesh,
+        setIsLoadingPolymesh
       }}
     >
       {children}

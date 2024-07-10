@@ -15,6 +15,7 @@
     "@polkadot/util-crypto": "^12.6.2",
     "@polymeshassociation/browser-extension-signing-manager": "^2.3.0",
     "@polymeshassociation/polymesh-sdk": "^24.6.0",
+    "axios": "^1.7.2",
     "ethers": "^6.13.1",
     "next": "14.2.4",
     "react": "^18",

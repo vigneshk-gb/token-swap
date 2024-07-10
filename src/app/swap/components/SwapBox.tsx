@@ -1,9 +1,20 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { BigNumber, Polymesh } from "@polymeshassociation/polymesh-sdk";
+import {
+  PolymeshError,
+  PolymeshTransactionBase,
+} from "@polymeshassociation/polymesh-sdk/internal";
+import {
+  GenericPolymeshTransaction,
+  TransactionStatus,
+  UnsubCallback,
+} from "@polymeshassociation/polymesh-sdk/types";
 import Image from "next/image";
 
 import { ethers } from "ethers";
+import axios from "axios";
 
 import { IoIosSwitch } from "react-icons/io";
 import { MdOutlineRefresh } from "react-icons/md";
@@ -18,8 +29,13 @@ import POLYXLogo from "../../../../public/icons/POLYX.png";
 
 import contractAbi from "../../../lib/token-swap.json";
 import { useTokenSwapContext } from "@/context/token-swap-context";
-import { formatWalletHash, formatWalletHashSmaller } from "@/utils/formater";
+import {
+  formatNumberWithCommas,
+  formatWalletHash,
+  formatWalletHashSmaller,
+} from "@/utils/formater";
 import { toast } from "react-toastify";
+import ClipLoader from "react-spinners/ClipLoader";
 
 const styles = {
   container: `relative w-full max-w-[500px] h-fit min-h-[500px] mt-[100px] mx-auto flex flex-col items-center gap-3 z-10`,
@@ -35,7 +51,7 @@ const styles = {
   percentItem: `flex-1 text-[14px] text-[#BCBED5] hover:text-[#949BE0] font-medium leading-normal text-center px-[20px] py-[5px] rounded-md bg-[#1C1E2F]  cursor-pointer transition-all ease-in-out duration-100 drop-shadow-2xl`,
   inputWrapper: `flex items-center justify-between gap-5`,
   inputBox: `w-2/3 text-[30px] text-[#FFF] placeholder:text-[#FFF] placeholder:text-opacity-90 font-semibold leading-normal bg-transparent text-clip appearance-none outline-none border-none shadow-none p-0 m-0`,
-  inputBoxSec: `w-full text-[16px] text-[#FFF] placeholder:text-[#FFF] placeholder:text-opacity-90 font-semibold leading-normal bg-transparent text-clip appearance-none outline-none border-none shadow-none p-0 m-0`,
+  inputBoxSec: `w-7/12 text-[16px] text-[#FFF] placeholder:text-[#FFF] placeholder:text-opacity-90 font-semibold leading-normal bg-transparent text-clip appearance-none outline-none border-none shadow-none p-0 m-0`,
   dropdown: `flex-1 relative`,
   dropdownMenu: `absolute w-full left-0 top-10 bg-[#1C1E2F] rounded-xl transition-all ease-in-out duration-200`,
   dropdownActiveItem: `flex items-center justify-between gap-1 text-[14px] text-[#BCBED5] hover:text-[#949BE0]  font-medium leading-normal px-[20px] py-[5px] rounded-xl bg-[#1C1E2F] cursor-pointer transition-all fade-in duration-100 drop-shadow-2xl`,
@@ -43,11 +59,11 @@ const styles = {
   tickersLogoCtn: `w-fit flex gap-3`,
   label: `text-[14px] text-[#AAB3FF] font-semibold leading-normal `,
   toCtn: `w-full h-fit min-h-[200px] bg-[#2C2D51] rounded-3xl p-[18px] flex flex-col gap-6 z-10 bg-opacity-70`,
-  primaryBtn: `w-1/2 min-w-fit h-fit text-[14px] text-[#BCBED5] hover:text-[#949BE0] font-bold leading-normal text-center px-[20px] py-[10px] rounded-md bg-[#1C1E2F]  cursor-pointer transition-all ease-in-out duration-100 drop-shadow-2xl`,
+  primaryBtn: `w-1/2 min-w-fit h-fit flex items-center justify-center gap-2 text-[14px] text-[#BCBED5] hover:text-[#949BE0] font-bold leading-normal text-center px-[20px] py-[10px] rounded-md bg-[#1C1E2F]  cursor-pointer transition-all ease-in-out duration-100 drop-shadow-2xl`,
 };
 
 const SwapBox = () => {
-  const { signingManagerMetamask, address } = useTokenSwapContext();
+  const { signingManagerMetamask, address, sdk } = useTokenSwapContext();
 
   const [isFromOpen, setIsFromOpen] = useState<boolean>(false);
   const [isToOpen, setIsToOpen] = useState<boolean>(false);
@@ -61,6 +77,31 @@ const SwapBox = () => {
 
   const fromDropDownRef = useRef<HTMLDivElement>(null);
   const toDropDownRef = useRef<HTMLDivElement>(null);
+
+  //transfer polyx
+  const [selectedAccount, setSelectedAccount] = useState<string>(address ?? "");
+  const [destinationAccount, setDestinationAccount] = useState<string>("");
+  const [availableBalance, setAvailableBalance] = useState<string>("0");
+  const [inputValue, setInputValue] = useState("");
+  const [memo, setMemo] = useState<string>("");
+  const [transferTx, setTransferTx] =
+    useState<GenericPolymeshTransaction<void, void>>();
+  const [transactionInProcess, setTransactionInProcess] =
+    useState<boolean>(false);
+  const [transactionHash, setTransactionHash] =
+    useState<PolymeshTransactionBase>();
+  const [transactionStatus, setTransactionStatus] =
+    useState<TransactionStatus>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Define reference for tracking component mounted state.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const toggleIsFromOpen = () => {
     setIsFromOpen((prev) => !prev);
@@ -79,6 +120,46 @@ const SwapBox = () => {
     setSelectedIndexTo(index);
     setIsToOpen(false);
   };
+
+  //useEffects
+
+  // Subscribe to the selected account's balance.
+
+  useEffect(() => {
+    const getAccountBalance = async () => {
+      if (!sdk || !address) return;
+      try {
+        const balance = await sdk.accountManagement.getAccountBalance({
+          account: address,
+        });
+        setAvailableBalance(balance.free.toString());
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    getAccountBalance();
+
+    return () => {
+      setAvailableBalance("0");
+    };
+  }, [sdk, address]);
+
+  useEffect(() => {
+    if (!sdk || !address) return;
+    let unsubBalance: UnsubCallback;
+    const checkAvailableBalance = async () => {
+      unsubBalance = await sdk.accountManagement.getAccountBalance(
+        { account: address },
+        (balance) => {
+          if (mountedRef.current) setAvailableBalance(balance.free.toString());
+        }
+      );
+    };
+    checkAvailableBalance();
+    return () => {
+      unsubBalance && unsubBalance();
+    };
+  }, [sdk, address]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -118,7 +199,8 @@ const SwapBox = () => {
     };
   }, []);
 
-  const tickers = ["ETH", "POLYX"];
+  const tickersOne = ["POLYX"];
+  const tickersTwo = ["ETH"];
 
   const handleChangeAmount = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -150,33 +232,116 @@ const SwapBox = () => {
     field: string
   ) => {
     const { value } = e.target;
-    
+
     if (field === "to") {
       setToAddress(value);
     }
-
   };
 
   //web3
-  const swapTokens = async () => {
-    if (!signingManagerMetamask || !toAddress) return;
+
+  const transferPolyx = async () => {
+    if (transactionInProcess || !sdk || !fromAmount || !toAddress) return;
 
     function isValidAddress(address: string): boolean {
       // Ethereum address regex: starts with "0x" followed by 40 hex characters (0-9, a-f, A-F)
       const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
-      
+
       // Polymesh address regex: starts with "5" and is 48 characters long
       const polyAddressRegex = /^5[a-zA-Z0-9]{47}$/;
-      
+
       // Check if the address matches either Ethereum or Polymesh address format
       return ethAddressRegex.test(address) || polyAddressRegex.test(address);
     }
 
     const checkIsValidAddress = isValidAddress(toAddress);
+
+    if (!fromAmount) {
+      toast.error("Enter token amount");
+      return;
+    }
     
-    if(!checkIsValidAddress) {
+    if (!checkIsValidAddress) {
+      toast.error("Invalid target address");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const transferPolyxTx = await sdk.network.transferPolyx({
+        amount: new BigNumber(fromAmount),
+        to: "5DXCKHv57XeHGck8hDEUHXviQD2SQwenknda9korQZHPzpwR",
+        memo: memo,
+      });
+
+      const receipt = await transferPolyxTx.run();
+
+      transferPolyxTx.onStatusChange((tx) => setTransferTx(tx));
+
+      if (mountedRef.current) setTransferTx(transferPolyxTx);
+    } catch (error) {
+      setIsLoading(false);
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    console.log(transferTx, "transferTx✅");
+  }, [transferTx]);
+
+  useEffect(() => {
+    if (!transferTx) return;
+
+    const bridgeToEvm = async () => {
+      try {
+        const updatedItem = {
+          polymeshAddress: address,
+          evmAddress: toAddress,
+          evmBlockchain: "Ethereum",
+          transactionHash: transferTx.txHash,
+          amount: fromAmount,
+        };
+
+        const response = await axios({
+          method: "post",
+          url: `https://polymesh-bridge.azurewebsites.net/Bridge/BridgeToEVM`,
+          data: updatedItem,
+        });
+
+        if (response.status === 200) {
+          setIsLoading(false);
+          toast.success("Transfer Successful");
+          setFromAmount(null);
+          setToAddress(null);
+        }
+      } catch (error) {
+        setIsLoading(false);
+        console.log(error);
+      }
+    };
+
+    bridgeToEvm();
+  }, [transferTx]);
+
+  const bridgeTokens = async () => {
+    if (!signingManagerMetamask || !toAddress) return;
+
+    function isValidAddress(address: string): boolean {
+      // Ethereum address regex: starts with "0x" followed by 40 hex characters (0-9, a-f, A-F)
+      const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+
+      // Polymesh address regex: starts with "5" and is 48 characters long
+      const polyAddressRegex = /^5[a-zA-Z0-9]{47}$/;
+
+      // Check if the address matches either Ethereum or Polymesh address format
+      return ethAddressRegex.test(address) || polyAddressRegex.test(address);
+    }
+
+    const checkIsValidAddress = isValidAddress(toAddress);
+
+    if (!checkIsValidAddress) {
       toast.error("Invalid address");
-      return
+      return;
     }
     try {
       //@ts-ignore
@@ -214,14 +379,14 @@ const SwapBox = () => {
         <div className={styles.InnerTopCtn}>
           <span className={styles.label}>From</span>
           <div className={styles.tickersLogoCtn}>
-            <Image
+            {/* <Image
               src={ethLogo}
               alt="ethLogo"
               width={22}
               height={22}
               className="cursor-pointer"
               onClick={() => setSelectedIndexFrom(0)}
-            />
+            /> */}
             {/* <Image
               src={usdcLogo}
               alt="usdclogo"
@@ -257,7 +422,7 @@ const SwapBox = () => {
                 className={styles.dropdownActiveItem}
                 onClick={toggleIsFromOpen}
               >
-                <span>{tickers[selectedIndexFrom]}</span>
+                <span>{tickersOne[selectedIndexFrom]}</span>
                 <RiArrowDropDownLine
                   size={25}
                   className={`${isFromOpen ? "rotate-180" : ""}`}
@@ -268,7 +433,7 @@ const SwapBox = () => {
                   isFromOpen ? "block z-10" : "hidden"
                 }`}
               >
-                {tickers.map((el, i) => (
+                {tickersOne.map((el, i) => (
                   <li
                     className={styles.dropdownItem}
                     onClick={() => handleFromDropDownSelect(i)}
@@ -282,21 +447,25 @@ const SwapBox = () => {
           </div>
         </div>
         <div className={styles.InnerSecondLastCtn}>
-        <input
-              type="text"
-              placeholder="0xc1D04...0c8948b"
-              className={styles.inputBoxSec}
-              inputMode="decimal"
-              pattern="^[0-9]*[.,]?[0-9]*$"
-              title="Please enter a valid number"
-              onChange={(e) => handleChangeAmount(e, "from")}
-              value={formatWalletHash(address ?? '')}
-              disabled={true}
-            />
+          <input
+            type="text"
+            placeholder="0xc1D04...0c8948b"
+            className={styles.inputBoxSec}
+            inputMode="decimal"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            title="Please enter a valid number"
+            onChange={(e) => handleChangeAmount(e, "from")}
+            value={formatWalletHash(address ?? "")}
+            disabled={true}
+          />
           <div className={styles.tickerBalanceCtn}>
-            <CiWallet size={22} />
+            <CiWallet size={20} />
             <div className={styles.activeTicker}>
-              {tickers[selectedIndexFrom]}
+              {`${
+                address
+                  ? formatNumberWithCommas(parseFloat(availableBalance))
+                  : "0"
+              } ${tickersOne[selectedIndexFrom]}`}
             </div>
           </div>
         </div>
@@ -330,20 +499,20 @@ const SwapBox = () => {
               className="cursor-pointer"
               onClick={() => setSelectedIndexTo(1)}
             /> */}
-            <Image
+            {/* <Image
               src={POLYXLogo}
               alt="POLYXLogo"
               width={22}
               height={22}
               className="cursor-pointer"
               onClick={() => setSelectedIndexTo(2)}
-            />
+            /> */}
           </div>
         </div>
 
         <div className={styles.InnerMiddleCtn}>
           <div className={styles.inputWrapper}>
-            <input
+            {/* <input
               type="text"
               placeholder="0.00"
               className={styles.inputBox}
@@ -353,13 +522,23 @@ const SwapBox = () => {
               onChange={(e) => handleChangeAmount(e, "to")}
               value={toAmount || ""}
               disabled={true}
+            /> */}
+            <input
+              type="text"
+              placeholder="target address"
+              className={styles.inputBoxSec}
+              inputMode="decimal"
+              pattern="^[0-9]*[.,]?[0-9]*$"
+              title="Please enter a valid number"
+              onChange={(e) => handleChangeAddress(e, "to")}
+              value={toAddress ?? ''}
             />
             <div className={styles.dropdown} ref={toDropDownRef}>
               <div
                 className={styles.dropdownActiveItem}
                 onClick={toggleIsToOpen}
               >
-                <span>{tickers[selectedIndexTo]}</span>
+                <span>{tickersTwo[selectedIndexTo]}</span>
                 <RiArrowDropDownLine
                   size={25}
                   className={`${isToOpen ? "rotate-180" : ""}`}
@@ -370,7 +549,7 @@ const SwapBox = () => {
                   isToOpen ? "block z-10" : "hidden"
                 }`}
               >
-                {tickers.map((el, i) => (
+                {tickersTwo.map((el, i) => (
                   <li
                     className={styles.dropdownItem}
                     onClick={() => handleToDropDownSelect(i)}
@@ -383,28 +562,39 @@ const SwapBox = () => {
             </div>
           </div>
         </div>
-        <div className={styles.InnerSecondLastCtn}>
-        <input
-              type="text"
-              placeholder="target address"
-              className={styles.inputBoxSec}
-              inputMode="decimal"
-              pattern="^[0-9]*[.,]?[0-9]*$"
-              title="Please enter a valid number"
-              onChange={(e) => handleChangeAddress(e, "to")}
-              value={toAddress ?? ''}
-            />
-          {/* <div className={styles.tickerBalanceCtn}>
+        {/* <div className={styles.InnerSecondLastCtn}>
+          <input
+            type="text"
+            placeholder="target address"
+            className={styles.inputBoxSec}
+            inputMode="decimal"
+            pattern="^[0-9]*[.,]?[0-9]*$"
+            title="Please enter a valid number"
+            onChange={(e) => handleChangeAddress(e, "to")}
+            value={toAddress ?? ""}
+          />
+          <div className={styles.tickerBalanceCtn}>
             <CiWallet size={22} />
             <div className={styles.activeTicker}>
               {tickers[selectedIndexTo]}
             </div>
-          </div> */}
-        </div>
+          </div>
+        </div> */}
       </div>
 
-      <button className={styles.primaryBtn} onClick={swapTokens}>
-        Swap
+      <button
+        className={styles.primaryBtn}
+        onClick={transferPolyx}
+        disabled={isLoading}
+      >
+        <ClipLoader
+          color="#949BE0"
+          loading={isLoading}
+          size={20}
+          aria-label="Loading Spinner"
+          data-testid="loader"
+        />
+        Bridge
       </button>
     </div>
   );

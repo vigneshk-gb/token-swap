@@ -13,7 +13,7 @@ import ClipLoader from "react-spinners/ClipLoader";
 
 import tokenSwapLogo from "../../../public/icons/tokenswap.svg";
 import metamaskLogo from "../../../public/icons/metamask.png";
-import POLYXLogo from "../../../public/icons/POLYX.png";
+import POLYXLogo from "../../../public/icons/polyx.png";
 
 import ProfileIcon from "../ProfileIcon";
 import { formatWalletHashSmaller } from "@/utils/formater";

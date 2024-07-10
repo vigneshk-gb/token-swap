@@ -23,9 +23,9 @@ import { RiArrowDropDownLine } from "react-icons/ri";
 import { CiWallet } from "react-icons/ci";
 import { FaArrowDownLong } from "react-icons/fa6";
 
-import ethLogo from "../../../../public/icons/eth.png";
-import usdcLogo from "../../../../public/icons/usdc.png";
-import POLYXLogo from "../../../../public/icons/POLYX.png";
+import ethLogo from "./public/icons/eth.png";
+import usdcLogo from "./public/icons/usdc.png";
+import POLYXLogo from "./public/icons/POLYX.png";
 
 import contractAbi from "../../../lib/token-swap.json";
 import { useTokenSwapContext } from "@/context/token-swap-context";

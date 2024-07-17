@@ -88,11 +88,11 @@ const SwapBox = () => {
     useState<GenericPolymeshTransaction<void, void>>();
   const [transactionInProcess, setTransactionInProcess] =
     useState<boolean>(false);
-  const [transactionHash, setTransactionHash] =
-    useState<PolymeshTransactionBase>();
-  const [transactionStatus, setTransactionStatus] =
-    useState<TransactionStatus>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  //bridgetopolymesh
+  const [transactionHash, setTransactionHash] = useState();
+  const [transactionStatus, setTransactionStatus] = useState();
 
   // Define reference for tracking component mounted state.
   const mountedRef = useRef(false);
@@ -145,7 +145,37 @@ const SwapBox = () => {
   }, [sdk, address]);
 
   useEffect(() => {
+    if (!signingManagerMetamask || !address) return;
+
+    if (!address.startsWith("0x")) return;
+
+    const checkAvailableBalance = async () => {
+      try {
+        const contractAddress = "0xf08B481A557BF0707DFAD08aD7D3f8D785FAE864";
+        const tokensContract = new ethers.Contract(
+          contractAddress,
+          contractAbi,
+          signingManagerMetamask
+        );
+
+        const balance = await tokensContract.balanceOf(address);
+        const weiValue = BigInt(balance);
+        const ethValue = Number(weiValue) / 1e18;
+        const convertedBalance = ethValue.toString();
+        setAvailableBalance(convertedBalance);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    checkAvailableBalance();
+  }, [address, transactionHash]);
+
+  useEffect(() => {
     if (!sdk || !address) return;
+
+    if (address.startsWith("0x")) return;
+
     let unsubBalance: UnsubCallback;
     const checkAvailableBalance = async () => {
       unsubBalance = await sdk.accountManagement.getAccountBalance(
@@ -199,8 +229,8 @@ const SwapBox = () => {
     };
   }, []);
 
-  const tickersOne = ["POLYX"];
-  const tickersTwo = ["ETH"];
+  const tickersOne = address?.startsWith("0x") ? ["WPOLYX"] : ["POLYX"];
+  const tickersTwo = address?.startsWith("0x") ? ["POLYX"] : ["WPOLYX"];
 
   const handleChangeAmount = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -260,7 +290,7 @@ const SwapBox = () => {
       toast.error("Enter token amount");
       return;
     }
-    
+
     if (!checkIsValidAddress) {
       toast.error("Invalid target address");
       return;
@@ -286,10 +316,6 @@ const SwapBox = () => {
   };
 
   useEffect(() => {
-    console.log(transferTx, "transferTx✅");
-  }, [transferTx]);
-
-  useEffect(() => {
     if (!transferTx) return;
 
     const bridgeToEvm = async () => {
@@ -297,7 +323,7 @@ const SwapBox = () => {
         const updatedItem = {
           polymeshAddress: address,
           evmAddress: toAddress,
-          evmBlockchain: "Ethereum",
+          evmBlockchain: "Sepolia",
           transactionHash: transferTx.txHash,
           amount: fromAmount,
         };
@@ -323,7 +349,42 @@ const SwapBox = () => {
     bridgeToEvm();
   }, [transferTx]);
 
-  const bridgeTokens = async () => {
+  useEffect(() => {
+    if (!transactionHash) return;
+
+    const bridgeToPolymesh = async () => {
+      try {
+        const updatedItem = {
+          polymeshAddress: toAddress,
+          evmAddress: address,
+          evmBlockchain: "Sepolia",
+          transactionHash: transactionHash,
+          amount: fromAmount,
+        };
+
+        const response = await axios({
+          method: "post",
+          url: `https://polymesh-bridge.azurewebsites.net/Bridge/BridgeToPolymesh`,
+          data: updatedItem,
+        });
+
+        if (response.status === 200) {
+          setIsLoading(false);
+          toast.success("Transfer Successful");
+          // toast.success(`https://sepolia.etherscan.io/tx/${transactionHash}`);
+          setFromAmount(null);
+          setToAddress(null);
+        }
+      } catch (error) {
+        setIsLoading(false);
+        console.log(error);
+      }
+    };
+
+    bridgeToPolymesh();
+  }, [transactionHash]);
+
+  const burnTokens = async () => {
     if (!signingManagerMetamask || !toAddress) return;
 
     function isValidAddress(address: string): boolean {
@@ -343,25 +404,34 @@ const SwapBox = () => {
       toast.error("Invalid address");
       return;
     }
+    setIsLoading(true);
+
     try {
       //@ts-ignore
 
-      const contractAddress = "0x003A422d4aF90C9bD4Ef147634D144B5DB168183";
+      const ethValue = parseFloat(fromAmount); // For example, 100 ETH
+      const weiValue = BigInt(ethValue * 1e18);
+
+
+      const contractAddress = "0xf08B481A557BF0707DFAD08aD7D3f8D785FAE864";
       const tokensContract = new ethers.Contract(
         contractAddress,
         contractAbi,
         signingManagerMetamask
       );
       // Call the burn function with a specified gas limit
-      const tx = await tokensContract.burn(fromAmount, address, {
+      const tx = await tokensContract.burn(weiValue, address, {
         gasLimit: 300000, // Set an appropriate gas limit
       });
       console.log("Transaction sent:", tx);
 
       // Wait for the transaction to be mined
       const receipt = await tx.wait();
+      setTransactionHash(receipt.hash);
       console.log("Transaction mined:", receipt);
     } catch (error) {
+      setIsLoading(false);
+
       console.error("Error burning tokens:", error);
     }
   };
@@ -379,14 +449,26 @@ const SwapBox = () => {
         <div className={styles.InnerTopCtn}>
           <span className={styles.label}>From</span>
           <div className={styles.tickersLogoCtn}>
-            {/* <Image
-              src={ethLogo}
-              alt="ethLogo"
-              width={22}
-              height={22}
-              className="cursor-pointer"
-              onClick={() => setSelectedIndexFrom(0)}
-            /> */}
+            {address?.startsWith("0x") ? (
+              <Image
+                src={ethLogo}
+                alt="ethLogo"
+                width={22}
+                height={22}
+                className="cursor-pointer"
+                onClick={() => setSelectedIndexFrom(0)}
+              />
+            ) : (
+              <Image
+                src={POLYXLogo}
+                alt="POLYXLogo"
+                width={22}
+                height={22}
+                className="cursor-pointer"
+                onClick={() => setSelectedIndexFrom(2)}
+              />
+            )}
+
             {/* <Image
               src={usdcLogo}
               alt="usdclogo"
@@ -395,14 +477,6 @@ const SwapBox = () => {
               className="cursor-pointer"
               onClick={() => setSelectedIndexFrom(1)}
             /> */}
-            <Image
-              src={POLYXLogo}
-              alt="POLYXLogo"
-              width={22}
-              height={22}
-              className="cursor-pointer"
-              onClick={() => setSelectedIndexFrom(2)}
-            />
           </div>
         </div>
         <div className={styles.InnerMiddleCtn}>
@@ -429,9 +503,8 @@ const SwapBox = () => {
                 />
               </div>
               <ul
-                className={`${styles.dropdownMenu} ${
-                  isFromOpen ? "block z-10" : "hidden"
-                }`}
+                className={`${styles.dropdownMenu} ${isFromOpen ? "block z-10" : "hidden"
+                  }`}
               >
                 {tickersOne.map((el, i) => (
                   <li
@@ -449,7 +522,11 @@ const SwapBox = () => {
         <div className={styles.InnerSecondLastCtn}>
           <input
             type="text"
-            placeholder="0xc1D04...0c8948b"
+            placeholder={
+              address?.startsWith("0x")
+                ? "0xc1D04...0c8948b"
+                : "5CV4DzB...vjWwWr9"
+            }
             className={styles.inputBoxSec}
             inputMode="decimal"
             pattern="^[0-9]*[.,]?[0-9]*$"
@@ -461,11 +538,10 @@ const SwapBox = () => {
           <div className={styles.tickerBalanceCtn}>
             <CiWallet size={20} />
             <div className={styles.activeTicker}>
-              {`${
-                address
+              {`${address
                   ? formatNumberWithCommas(parseFloat(availableBalance))
                   : "0"
-              } ${tickersOne[selectedIndexFrom]}`}
+                } ${tickersOne[selectedIndexFrom]}`}
             </div>
           </div>
         </div>
@@ -483,14 +559,26 @@ const SwapBox = () => {
         <div className={styles.InnerTopCtn}>
           <span className={styles.label}>To</span>
           <div className={styles.tickersLogoCtn}>
-            <Image
-              src={ethLogo}
-              alt="ethLogo"
-              width={22}
-              height={22}
-              className="cursor-pointer"
-              onClick={() => setSelectedIndexTo(0)}
-            />
+            {address?.startsWith("0x") ? (
+              <Image
+                src={POLYXLogo}
+                alt="POLYXLogo"
+                width={22}
+                height={22}
+                className="cursor-pointer"
+                onClick={() => setSelectedIndexTo(2)}
+              />
+            ) : (
+              <Image
+                src={ethLogo}
+                alt="ethLogo"
+                width={22}
+                height={22}
+                className="cursor-pointer"
+                onClick={() => setSelectedIndexTo(0)}
+              />
+            )}
+
             {/* <Image
               src={usdcLogo}
               alt="usdclogo"
@@ -498,14 +586,6 @@ const SwapBox = () => {
               height={22}
               className="cursor-pointer"
               onClick={() => setSelectedIndexTo(1)}
-            /> */}
-            {/* <Image
-              src={POLYXLogo}
-              alt="POLYXLogo"
-              width={22}
-              height={22}
-              className="cursor-pointer"
-              onClick={() => setSelectedIndexTo(2)}
             /> */}
           </div>
         </div>
@@ -525,13 +605,13 @@ const SwapBox = () => {
             /> */}
             <input
               type="text"
-              placeholder="target address"
+              placeholder="address"
               className={styles.inputBoxSec}
               inputMode="decimal"
               pattern="^[0-9]*[.,]?[0-9]*$"
               title="Please enter a valid number"
               onChange={(e) => handleChangeAddress(e, "to")}
-              value={toAddress ?? ''}
+              value={toAddress ?? ""}
             />
             <div className={styles.dropdown} ref={toDropDownRef}>
               <div
@@ -545,9 +625,8 @@ const SwapBox = () => {
                 />
               </div>
               <ul
-                className={`${styles.dropdownMenu} ${
-                  isToOpen ? "block z-10" : "hidden"
-                }`}
+                className={`${styles.dropdownMenu} ${isToOpen ? "block z-10" : "hidden"
+                  }`}
               >
                 {tickersTwo.map((el, i) => (
                   <li
@@ -584,7 +663,7 @@ const SwapBox = () => {
 
       <button
         className={styles.primaryBtn}
-        onClick={transferPolyx}
+        onClick={address?.startsWith("0x") ? burnTokens : transferPolyx}
         disabled={isLoading}
       >
         <ClipLoader

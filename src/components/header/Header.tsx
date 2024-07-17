@@ -37,12 +37,11 @@ const Header = () => {
     accounts,
     createSigningManager,
     setSigningManager,
-    signingManagerMetamask,
     setSigningManagerMetamask,
     address,
     setAddress,
     isLoadingPolymesh,
-    setIsLoadingPolymesh
+    setIsLoadingPolymesh,
   } = useTokenSwapContext();
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -150,7 +149,7 @@ const Header = () => {
           Home
         </Link>
         <Link href="/swap" className={styles.menuItem}>
-          Swap
+          Bridge
         </Link>
       </div>
 
@@ -172,7 +171,7 @@ const Header = () => {
             </summary>
 
             <div className={styles.walletList}>
-              {/* <div
+              <div
                 className={styles.walletItem}
                 onClick={connectWalletToMetamask}
               >
@@ -184,7 +183,7 @@ const Header = () => {
                   className="cursor-pointer"
                 />
                 Metamask
-              </div> */}
+              </div>
               <div
                 className={styles.walletItem}
                 onClick={connectWalletToPolymesh}
